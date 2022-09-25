@@ -35,8 +35,15 @@ module.exports = {
     overlay: {
       warnings: false,
       errors: true
-    }
+    },
     // before: require('./mock/mock-server.js')
+    // 解决跨域问题配置的地址
+    proxy: {
+      '/api': {
+        target: 'http://likede2-admin.itheima.net/likede/', // 跨域请求的地址
+        changeOrigin: true // 只有这个值为true的情况下 才表示开启跨域
+      }
+    }
   },
   configureWebpack: {
     // provide the app's title in webpack's name field, so that

@@ -1,100 +1,134 @@
 <template>
   <div class="login-container">
     <el-form ref="loginForm" :model="loginForm" :rules="loginRules" class="login-form" auto-complete="on" label-position="left">
-
+      <!-- 标题 -->
       <div class="title-container">
-        <h3 class="title">Login Form</h3>
+        <!-- <h3 class="title">Login Form</h3> -->
+        <h3 class="title">
+          <img src="@/assets/common/logo.png" alt="">
+        </h3>
       </div>
-
+      <!-- 账号框 -->
       <el-form-item prop="username">
         <span class="svg-container">
-          <svg-icon icon-class="user" />
+          <!-- <svg-icon icon-class="user" /> -->
+          <i class="el-icon-mobile-phone" />
         </span>
         <el-input
-          ref="username"
           v-model="loginForm.username"
-          placeholder="Username"
-          name="username"
-          type="text"
-          tabindex="1"
-          auto-complete="on"
+          placeholder="请输入账号"
         />
       </el-form-item>
-
+      <!-- 密码框 -->
       <el-form-item prop="password">
         <span class="svg-container">
-          <svg-icon icon-class="password" />
+          <!-- <svg-icon icon-class="password" /> -->
+          <i class="el-icon-lock" />
         </span>
         <el-input
-          :key="passwordType"
           ref="password"
           v-model="loginForm.password"
           :type="passwordType"
-          placeholder="Password"
-          name="password"
-          tabindex="2"
-          auto-complete="on"
-          @keyup.enter.native="handleLogin"
+          placeholder="请输入密码"
         />
         <span class="show-pwd" @click="showPwd">
           <svg-icon :icon-class="passwordType === 'password' ? 'eye' : 'eye-open'" />
         </span>
       </el-form-item>
-
-      <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:30px;" @click.native.prevent="handleLogin">Login</el-button>
-
-      <div class="tips">
-        <span style="margin-right:20px;">username: admin</span>
-        <span> password: any</span>
-      </div>
-
+      <!-- 验证码框 -->
+      <el-row>
+        <el-col :span="17">
+          <el-form-item prop="code">
+            <span class="svg-container">
+              <!-- <svg-icon icon-class="user" /> -->
+              <i class="el-icon-check" />
+            </span>
+            <el-input
+              v-model="loginForm.code"
+              placeholder="请输入验证码"
+            />
+          </el-form-item>
+        </el-col>
+        <el-col :span="7"><img :src="codeImg" alt="" @click="imageCode"></el-col>
+      </el-row>
+      <!--  -->
+      <!-- 点击登陆的按钮 -->
+      <el-button
+        class="loginBtn"
+        :loading="loading"
+        type="primary"
+        style="width:100%;margin-bottom:30px;"
+        @click="login"
+      >登陆</el-button>
+      <!-- @click.native.prevent="handleLogin" -->
     </el-form>
   </div>
 </template>
 
 <script>
-import { validUsername } from '@/utils/validate'
+import { validPhone } from '@/utils/validate'
+import { imageCodeAPI } from '@/api/login'
 
 export default {
   name: 'Login',
   data() {
-    const validateUsername = (rule, value, callback) => {
-      if (!validUsername(value)) {
-        callback(new Error('Please enter the correct user name'))
-      } else {
-        callback()
-      }
-    }
-    const validatePassword = (rule, value, callback) => {
-      if (value.length < 6) {
-        callback(new Error('The password can not be less than 6 digits'))
+    const phoneValid = (rule, value, callback) => {
+      // rule 对应的规则
+      // value 对应的值
+      // callback 验证完成后调用的回调函数 验证通过直接调用 验证不通过 也是 调用 callback,但是会把错误信息 传递出去
+      if (!validPhone(value)) {
+        callback(new Error('手机号格式不正确'))
       } else {
         callback()
       }
     }
     return {
+      // 表单校验在from用
       loginForm: {
-        username: 'admin',
-        password: '111111'
+        // 账号
+        username: '17586823419',
+        // 密码
+        password: '111111',
+        // 验证码
+        code: '请输入验证码',
+
+        loginType: 0
       },
+      // 校验规则在from用
       loginRules: {
-        username: [{ required: true, trigger: 'blur', validator: validateUsername }],
-        password: [{ required: true, trigger: 'blur', validator: validatePassword }]
+        username: [{ required: true, massage: '手机号必填', trigger: 'blur' },
+        // phoneValid 是自定义的手机验证函数在data中声明
+          { validator: phoneValid, trigger: 'blur' }
+        ],
+        password: [
+          { required: true, message: '密码必填', trigger: 'blur' },
+          { min: 6, max: 16, message: '密码格式不正确', trigger: 'blur' }
+        ],
+        code: [{ required: true, massage: '验证码必填', trigger: 'blur' }]
       },
+      // loading按钮的旋转功能
       loading: false,
+      // 定义一个数据来判断是否是密码框来显示文字
       passwordType: 'password',
-      redirect: undefined
+      // redirect: undefined
+      // 图片的地址
+      codeImg: ''
+
     }
   },
-  watch: {
-    $route: {
-      handler: function(route) {
-        this.redirect = route.query && route.query.redirect
-      },
-      immediate: true
-    }
+  // watch: {
+  //   $route: {
+  //     handler: function(route) {
+  //       this.redirect = route.query && route.query.redirect
+  //     },
+  //     immediate: true
+  //   }
+  // },
+  created() {
+    this.imageCode()
   },
   methods: {
+
     showPwd() {
       if (this.passwordType === 'password') {
         this.passwordType = ''
@@ -105,21 +139,46 @@ export default {
         this.$refs.password.focus()
       })
     },
-    handleLogin() {
-      this.$refs.loginForm.validate(valid => {
-        if (valid) {
-          this.loading = true
-          this.$store.dispatch('user/login', this.loginForm).then(() => {
-            this.$router.push({ path: this.redirect || '/' })
-            this.loading = false
-          }).catch(() => {
-            this.loading = false
-          })
-        } else {
-          console.log('error submit!!')
-          return false
-        }
-      })
+    // handleLogin() {
+    //   this.$refs.loginForm.validate(valid => {
+    //     if (valid) {
+    //       this.loading = true
+    //       this.$store.dispatch('user/login', this.loginForm).then(() => {
+    //         this.$router.push({ path: this.redirect || '/' })
+    //         this.loading = false
+    //       }).catch(() => {
+    //         this.loading = false
+    //       })
+    //     } else {
+    //       console.log('error submit!!')
+    //       return false
+    //     }
+    //   })
+    // }
+
+    // 给图片一个点击事件
+    randomString() { return Math.random().toString(36).slice(2, 6) },
+    // 图片验证码
+    async imageCode() {
+      const m = this.randomString()
+      // console.log(m)
+      const res = await imageCodeAPI(m)
+      console.log(res)
+      this.codeImg = res.request.responseURL
+    },
+
+    // 发请求
+    async login() {
+      try {
+        await this.$refs.loginForm.validate()
+        this.loading = true
+        //  接口请求
+        // await this.$store.dispatch('user/loginAction', this.loginForm)
+        // 调用vuex的请求函数
+        await this.$store.dispatch('user/loginAction', this.loginForm)
+      } finally {
+        this.loading = false
+      }
     }
   }
 }
@@ -130,7 +189,7 @@ export default {
 /* Detail see https://github.com/PanJiaChen/vue-element-admin/pull/927 */
 
 $bg:#283443;
-$light_gray:#fff;
+$light_gray:#999;
 $cursor: #fff;
 
 @supports (-webkit-mask: none) and (not (cater-color: $cursor)) {
@@ -141,6 +200,8 @@ $cursor: #fff;
 
 /* reset element-ui css */
 .login-container {
+  background-image: url('~@/assets/common/background.png'); // 设置背景图片
+  // background-position: center; // 将图片位置设置为充满整个屏幕
   .el-input {
     display: inline-block;
     height: 47px;
@@ -169,11 +230,24 @@ $cursor: #fff;
     border-radius: 5px;
     color: #454545;
   }
+  .loginBtn {
+    // background: #407ffe;
+    background: linear-gradient(262deg,#2e50e1,#6878f0);
+    height: 51px;
+    line-height: 32px;
+    font-size: 14px;
+    width:100%;
+    margin-bottom:30px;
+    border: none;
+    color: #fff;
+  }
+
 }
 </style>
 
 <style lang="scss" scoped>
 $bg:#2d3a4b;
+
 $dark_gray:#889aa4;
 $light_gray:#eee;
 
@@ -181,20 +255,34 @@ $light_gray:#eee;
   min-height: 100%;
   width: 100%;
   background-color: $bg;
-  overflow: hidden;
 
+    //  加
+ .el-form-item {
+    border: 1px solid #e2e2e2;
+    background:#fff;
+    border-radius: 5px;
+    color: #454545;
+    }
   .login-form {
     position: relative;
     width: 520px;
     max-width: 100%;
-    padding: 160px 35px 0;
-    margin: 0 auto;
-    overflow: hidden;
+    position: absolute;
+    height: 388px;
+    top: 50%;
+    left: 50%;
+    margin-top: -194px;
+    margin-left: -259px;
+    padding: 30px 35px 0;
+    background: #fff;
+    -webkit-box-shadow: 0 3px 70px 0 rgb(30 111 72 / 35%);
+    box-shadow: 0 3px 70px 0rgba(30,111,72,.35);
+    border-radius: 10px
   }
 
   .tips {
     font-size: 14px;
-    color: #fff;
+    color: #999;
     margin-bottom: 10px;
 
     span {
@@ -214,13 +302,21 @@ $light_gray:#eee;
 
   .title-container {
     position: relative;
-
     .title {
       font-size: 26px;
       color: $light_gray;
       margin: 0px auto 40px auto;
       text-align: center;
       font-weight: bold;
+      // 加
+      img{
+    position: absolute;
+    width: 96px;
+    height: 96px;
+    top: -117px;
+    left: 50%;
+    margin-left: -48px
+      }
     }
   }
 
