@@ -9,13 +9,13 @@
         </h3>
       </div>
       <!-- 账号框 -->
-      <el-form-item prop="username">
+      <el-form-item prop="loginName">
         <span class="svg-container">
           <!-- <svg-icon icon-class="user" /> -->
           <i class="el-icon-mobile-phone" />
         </span>
         <el-input
-          v-model="loginForm.username"
+          v-model="loginForm.loginName"
           placeholder="请输入账号"
         />
       </el-form-item>
@@ -60,51 +60,40 @@
         style="width:100%;margin-bottom:30px;"
         @click="login"
       >登陆</el-button>
-      <!-- @click.native.prevent="handleLogin" -->
+
     </el-form>
   </div>
 </template>
 
 <script>
-import { validPhone } from '@/utils/validate'
 import { imageCodeAPI } from '@/api/login'
 
 export default {
   name: 'Login',
   data() {
-    const phoneValid = (rule, value, callback) => {
-      // rule 对应的规则
-      // value 对应的值
-      // callback 验证完成后调用的回调函数 验证通过直接调用 验证不通过 也是 调用 callback,但是会把错误信息 传递出去
-      if (!validPhone(value)) {
-        callback(new Error('手机号格式不正确'))
-      } else {
-        callback()
-      }
-    }
     return {
       // 表单校验在from用
       loginForm: {
         // 账号
-        username: '17586823419',
+        // username: 'admin',
+        loginName: 'admin',
         // 密码
-        password: '111111',
+        password: 'admin',
         // 验证码
-        code: '请输入验证码',
-
-        loginType: 0
+        code: '',
+        // 后台字段
+        loginType: 0,
+        //  随机数
+        clientToken: ''
       },
       // 校验规则在from用
       loginRules: {
-        username: [{ required: true, massage: '手机号必填', trigger: 'blur' },
-        // phoneValid 是自定义的手机验证函数在data中声明
-          { validator: phoneValid, trigger: 'blur' }
+        loginName: [{ required: true, message: '手机号必填', trigger: 'blur' }
         ],
         password: [
-          { required: true, message: '密码必填', trigger: 'blur' },
-          { min: 6, max: 16, message: '密码格式不正确', trigger: 'blur' }
+          { required: true, message: '密码必填', trigger: 'blur' }
         ],
-        code: [{ required: true, massage: '验证码必填', trigger: 'blur' }]
+        code: [{ required: true, message: '验证码必填', trigger: 'blur' }]
       },
       // loading按钮的旋转功能
       loading: false,
@@ -136,6 +125,7 @@ export default {
         this.passwordType = 'password'
       }
       this.$nextTick(() => {
+        // 获取焦点
         this.$refs.password.focus()
       })
     },
@@ -160,21 +150,23 @@ export default {
     randomString() { return Math.random().toString(36).slice(2, 6) },
     // 图片验证码
     async imageCode() {
-      const m = this.randomString()
+      this.loginForm.clientToken = this.randomString()
       // console.log(m)
-      const res = await imageCodeAPI(m)
-      console.log(res)
+      const res = await imageCodeAPI(this.loginForm.clientToken)
+      // console.log(res)
       this.codeImg = res.request.responseURL
     },
 
     // 发请求
     async login() {
       try {
+        // 表单验证通过
         await this.$refs.loginForm.validate()
         this.loading = true
         //  接口请求
         // await this.$store.dispatch('user/loginAction', this.loginForm)
         // 调用vuex的请求函数
+        // 发请求在vuex中
         await this.$store.dispatch('user/loginAction', this.loginForm)
       } finally {
         this.loading = false
